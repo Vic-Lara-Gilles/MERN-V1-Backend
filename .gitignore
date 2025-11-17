@@ -1,0 +1,48 @@
+# Node.js
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# pnpm
+pnpm-lock.yaml
+backend/pnpm-lock.yaml
+frontend/pnpm-lock.yaml
+
+# Logs
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# dotenv environment variables
+yarn-debug.log*
+backend/.env
+frontend/.env
+
+# Frontend build
+yarn-error.log*
+
+# Vite cache
+
+
+# macOS
+# dotenv environment variables
+
+# Editor settings
+.env
+
+# Frontend build
+frontend/dist/
+
+# Vite cache
+frontend/.vite/
+
+# macOS
+.DS_Store
+
+# Editor settings
+.vscode/
+.idea/
+*.swp
+*.swo
