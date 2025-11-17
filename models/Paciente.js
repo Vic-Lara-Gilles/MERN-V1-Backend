@@ -1,81 +1,85 @@
 import mongoose from "mongoose";
 
-const pacientesSchema = mongoose.Schema({
+const pacienteSchema = mongoose.Schema({
+    // Identificación
     nombre: {
         type: String,
         required: true,
+        trim: true
     },
+    numeroHistoriaClinica: {
+        type: String,
+        unique: true,
+        trim: true
+    },
+    // Información básica
     especie: {
         type: String,
         required: true,
-    },
-    sexo: {
-        type: String,
-        required: true,
-    },
-    peso: {
-        type: String,
-        required: true,
+        enum: ['Canino', 'Felino', 'Ave', 'Reptil', 'Roedor', 'Otro']
     },
     raza: {
         type: String,
-        required: true,
+        trim: true
     },
-    altura: {
+    fechaNacimiento: {
+        type: Date
+    },
+    sexo: {
         type: String,
-        required: true,
+        enum: ['Macho', 'Hembra']
     },
-    fechaIngreso: {
-        type: Date,
-        required: true,
-        default: Date.now(),
-    },
-    fechaAlta: {
-        type: Date,
-        required: true,
-        default: Date.now(),
-    },
-    fechaNac: {
-        type: Date,
-        required: true,
-        default: Date.now(),
-    },
-    sintomas: {
+    color: {
         type: String,
-        required: true,
+        trim: true
     },
+    peso: {
+        type: Number
+    },
+    // Relación con cliente
     propietario: {
-        type: String,
-        required: true,
-    },
-    run: {
-        type: String,
-        required: true,
-    },
-    domicilio: {
-        type: String,
-        required: true,
-    },
-    telefono: {
-        type: String,
-        required: true,
-    },
-    email: {
-        type: String,
-        required: true,
-    },
-    veterinario: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Veterinario",
+        ref: 'Cliente',
+        required: true
     },
-}, 
-{
-    timestamps: true,
-}
-);
+    // Información médica
+    microchip: {
+        type: String,
+        trim: true
+    },
+    esterilizado: {
+        type: Boolean,
+        default: false
+    },
+    alergias: [{
+        type: String,
+        trim: true
+    }],
+    condicionesMedicas: [{
+        type: String,
+        trim: true
+    }],
+    // Multimedia
+    foto: {
+        type: String
+    },
+    // Control
+    activo: {
+        type: Boolean,
+        default: true
+    }
+}, {
+    timestamps: true
+});
 
-const Paciente = mongoose.model("Paciente", pacientesSchema);
+// Generar número de historia clínica antes de guardar
+pacienteSchema.pre('save', async function(next) {
+    if(!this.numeroHistoriaClinica) {
+        const count = await mongoose.model('Paciente').countDocuments();
+        this.numeroHistoriaClinica = `HC-${String(count + 1).padStart(6, '0')}`;
+    }
+    next();
+});
 
+const Paciente = mongoose.model('Paciente', pacienteSchema);
 export default Paciente;
-
-
