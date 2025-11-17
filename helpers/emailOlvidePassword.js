@@ -1,5 +1,4 @@
 import nodemailer from 'nodemailer';
-import {olvidePassword} from '../controllers/veterinarioController.js';
 
 const emailOlvidePassword = async (datos) => {
 const transporter = nodemailer.createTransport({
