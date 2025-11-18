@@ -5,6 +5,11 @@ import Usuario from "../models/Usuario.js";
 
 // Crear nueva cita
 const crearCita = async(req, res) => {
+    console.log('=== DEBUG CREAR CITA ===');
+    console.log('req.body:', req.body);
+    console.log('fecha:', req.body.fecha, 'tipo:', typeof req.body.fecha);
+    console.log('hora:', req.body.hora, 'tipo:', typeof req.body.hora);
+    
     const { paciente, cliente, veterinario, fecha, hora } = req.body;
 
     // Verificar que existen las referencias
@@ -12,18 +17,25 @@ const crearCita = async(req, res) => {
     const existeCliente = await Cliente.findById(cliente);
     const existeVeterinario = await Usuario.findOne({ _id: veterinario, rol: 'veterinario' });
 
+    console.log('existePaciente:', !!existePaciente);
+    console.log('existeCliente:', !!existeCliente);
+    console.log('existeVeterinario:', !!existeVeterinario);
+
     if (!existePaciente) {
         const error = new Error('Paciente no encontrado');
+        console.log('ERROR: Paciente no encontrado');
         return res.status(404).json({msg: error.message});
     }
 
     if (!existeCliente) {
         const error = new Error('Cliente no encontrado');
+        console.log('ERROR: Cliente no encontrado');
         return res.status(404).json({msg: error.message});
     }
 
     if (!existeVeterinario) {
         const error = new Error('Veterinario no encontrado');
+        console.log('ERROR: Veterinario no encontrado');
         return res.status(404).json({msg: error.message});
     }
 
@@ -32,6 +44,9 @@ const crearCita = async(req, res) => {
             ...req.body,
             agendadaPor: req.usuario._id
         });
+        
+        console.log('Cita a guardar:', cita);
+        
         const citaGuardada = await cita.save();
         
         await citaGuardada.populate([
@@ -41,11 +56,16 @@ const crearCita = async(req, res) => {
             { path: 'agendadaPor', select: 'nombre rol' }
         ]);
 
+        console.log('Cita guardada exitosamente:', citaGuardada._id);
+        console.log('=== FIN DEBUG ===');
+        
         res.json(citaGuardada);
     } catch (error) {
-        console.log(error);
+        console.log('ERROR al guardar cita:', error);
+        console.log('Error completo:', error.message);
+        console.log('=== FIN DEBUG ===');
         const e = new Error('Error al crear la cita');
-        return res.status(500).json({msg: e.message});
+        return res.status(500).json({msg: e.message, error: error.message});
     }
 };
 
@@ -53,13 +73,15 @@ const crearCita = async(req, res) => {
 const obtenerCitas = async(req, res) => {
     try {
         const citas = await Cita.find()
-            .populate('paciente', 'nombre especie numeroHistoriaClinica')
-            .populate('cliente', 'nombre apellido rut telefono')
-            .populate('veterinario', 'nombre especialidad')
+            .populate('paciente', 'nombre especie raza sexo numeroHistoriaClinica propietario')
+            .populate('cliente', 'nombre apellido rut telefono email')
+            .populate('veterinario', 'nombre email especialidad rol')
+            .populate('agendadaPor', 'nombre rol')
             .sort({ fecha: 1, hora: 1 });
         res.json(citas);
     } catch (error) {
         console.log(error);
+        res.status(500).json({ msg: 'Error al obtener las citas' });
     }
 };
 
