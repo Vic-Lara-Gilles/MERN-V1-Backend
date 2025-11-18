@@ -241,10 +241,12 @@ const obtenerVeterinarios = async(req, res) => {
             rol: 'veterinario',
             activo: true,
             confirmado: true
-        }).select('nombre especialidad licenciaProfesional');
+        }).select('_id nombre especialidad licenciaProfesional');
+        
         res.json(veterinarios);
     } catch (error) {
         console.log(error);
+        res.status(500).json({ msg: 'Error al obtener veterinarios' });
     }
 };
 
