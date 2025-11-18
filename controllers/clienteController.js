@@ -1,4 +1,5 @@
 import Cliente from "../models/Cliente.js";
+import Paciente from "../models/Paciente.js";
 import generarJWT from "../helpers/generarJWT.js";
 import generarId from "../helpers/generarId.js";
 import emailRegistro from "../helpers/emailRegistro.js";
@@ -6,7 +7,7 @@ import emailOlvidePassword from "../helpers/emailOlvidePassword.js";
 
 // Registrar nuevo cliente (personal de la clínica)
 const registrar = async (req, res) => {
-    const {email, rut} = req.body;
+    const {email, rut, pacientes} = req.body;
 
     // Prevenir clientes duplicados
     const existeEmail = await Cliente.findOne({email});
@@ -22,18 +23,48 @@ const registrar = async (req, res) => {
     }
 
     try {
-        // Guardar nuevo cliente
+        // Generar contraseña temporal usando el RUT sin puntos ni guión
+        const passwordTemporal = rut.replace(/[.-]/g, '');
+        
+        // Guardar nuevo cliente con contraseña temporal
         const cliente = new Cliente({
-            ...req.body,
+            nombre: req.body.nombre,
+            apellido: req.body.apellido,
+            rut: req.body.rut,
+            email: req.body.email,
+            telefono: req.body.telefono,
+            direccion: req.body.direccion,
+            ciudad: req.body.ciudad,
+            comuna: req.body.comuna,
+            notas: req.body.notas,
+            password: passwordTemporal,
             registradoPor: req.usuario._id
         });
         const clienteGuardado = await cliente.save();
 
-        res.json(clienteGuardado);
+        // Crear pacientes asociados si se enviaron
+        let pacientesCreados = [];
+        if (pacientes && Array.isArray(pacientes) && pacientes.length > 0) {
+            for (const pacienteData of pacientes) {
+                const nuevoPaciente = new Paciente({
+                    ...pacienteData,
+                    propietario: clienteGuardado._id
+                });
+                const pacienteGuardado = await nuevoPaciente.save();
+                pacientesCreados.push(pacienteGuardado);
+            }
+        }
+
+        // Devolver respuesta sin el password
+        const { password, token, ...clienteResponse } = clienteGuardado.toObject();
+        res.json({
+            ...clienteResponse,
+            pacientes: pacientesCreados
+        });
     } catch (error) {
         console.log(error);
         const e = new Error('Error al crear el cliente');
-        return res.status(500).json({msg: e.message});
+        return res.status(500).json({msg: e.message, detalle: error.message});
     }
 };
 
@@ -41,8 +72,7 @@ const registrar = async (req, res) => {
 const obtenerClientes = async(req, res) => {
     try {
         const clientes = await Cliente.find()
-            .select('-password -token')
-            .populate('registradoPor', 'nombre email');
+            .select('-password -token -registradoPor');
         res.json(clientes);
     } catch (error) {
         console.log(error);
@@ -55,8 +85,7 @@ const obtenerCliente = async(req, res) => {
 
     try {
         const cliente = await Cliente.findById(id)
-            .select('-password -token')
-            .populate('registradoPor', 'nombre email');
+            .select('-password -token -registradoPor');
         
         if (!cliente) {
             const error = new Error('Cliente no encontrado');
