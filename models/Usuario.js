@@ -55,8 +55,15 @@ const usuarioSchema = mongoose.Schema({
     timestamps: true
 });
 
-// Hashear password antes de guardar
+// Validaciones y hasheo de password antes de guardar
 usuarioSchema.pre('save', async function(next) {
+    // Validar que veterinarios tengan especialidad
+    if (this.rol === 'veterinario' && !this.especialidad) {
+        const error = new Error('Veterinarios deben tener especialidad');
+        return next(error);
+    }
+    
+    // Hashear password solo si fue modificado
     if(!this.isModified('password')) {
         next();
     }
