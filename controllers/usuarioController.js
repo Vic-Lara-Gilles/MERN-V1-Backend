@@ -284,6 +284,21 @@ const activarUsuario = async(req, res) => {
     }
 };
 
+
+// Obtener usuario por ID (solo admin)
+const obtenerUsuarioPorId = async (req, res) => {
+    try {
+        const usuario = await Usuario.findById(req.params.id).select('-password -token');
+        if (!usuario) {
+            return res.status(404).json({ msg: 'Usuario no encontrado' });
+        }
+        res.json(usuario);
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ msg: 'Error al obtener usuario' });
+    }
+};
+
 export {
     registrar,
     perfil,
@@ -297,5 +312,6 @@ export {
     obtenerUsuarios,
     obtenerVeterinarios,
     desactivarUsuario,
-    activarUsuario
+    activarUsuario,
+    obtenerUsuarioPorId
 };

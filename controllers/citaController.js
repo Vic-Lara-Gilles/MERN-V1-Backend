@@ -2,6 +2,7 @@ import Cita from "../models/Cita.js";
 import Paciente from "../models/Paciente.js";
 import Cliente from "../models/Cliente.js";
 import Usuario from "../models/Usuario.js";
+import Veterinario from "../models/Veterinario.js";
 
 // Crear nueva cita
 const crearCita = async(req, res) => {
@@ -15,7 +16,7 @@ const crearCita = async(req, res) => {
     // Verificar que existen las referencias
     const existePaciente = await Paciente.findById(paciente);
     const existeCliente = await Cliente.findById(cliente);
-    const existeVeterinario = await Usuario.findOne({ _id: veterinario, rol: 'veterinario' });
+    const existeVeterinario = await Veterinario.findById(veterinario);
 
     console.log('existePaciente:', !!existePaciente);
     console.log('existeCliente:', !!existeCliente);
@@ -48,11 +49,12 @@ const crearCita = async(req, res) => {
         console.log('Cita a guardar:', cita);
         
         const citaGuardada = await cita.save();
-        
         await citaGuardada.populate([
             { path: 'paciente', select: 'nombre especie numeroHistoriaClinica' },
             { path: 'cliente', select: 'nombre apellido rut telefono' },
-            { path: 'veterinario', select: 'nombre especialidad' },
+            { path: 'veterinario',
+              populate: { path: 'usuario', select: 'nombre email activo createdAt' },
+              select: 'especialidad licenciaProfesional usuario' },
             { path: 'agendadaPor', select: 'nombre rol' }
         ]);
 
@@ -75,7 +77,11 @@ const obtenerCitas = async(req, res) => {
         const citas = await Cita.find()
             .populate('paciente', 'nombre especie raza sexo numeroHistoriaClinica propietario')
             .populate('cliente', 'nombre apellido rut telefono email')
-            .populate('veterinario', 'nombre email especialidad rol')
+            .populate({
+                path: 'veterinario',
+                select: 'especialidad licenciaProfesional usuario',
+                populate: { path: 'usuario', select: 'nombre email activo createdAt' }
+            })
             .populate('agendadaPor', 'nombre rol')
             .sort({ fecha: 1, hora: 1 });
         res.json(citas);
@@ -88,19 +94,20 @@ const obtenerCitas = async(req, res) => {
 // Obtener cita por ID
 const obtenerCita = async(req, res) => {
     const { id } = req.params;
-    
     try {
         const cita = await Cita.findById(id)
             .populate('paciente')
             .populate('cliente')
-            .populate('veterinario', 'nombre especialidad')
+            .populate({
+                path: 'veterinario',
+                select: 'especialidad licenciaProfesional usuario',
+                populate: { path: 'usuario', select: 'nombre email activo createdAt' }
+            })
             .populate('agendadaPor', 'nombre rol');
-
         if(!cita) {
             const error = new Error('Cita no encontrada');
             return res.status(404).json({msg: error.message}); 
         }
-
         res.json(cita);
     } catch (error) {
         console.log(error);
@@ -110,14 +117,11 @@ const obtenerCita = async(req, res) => {
 // Obtener citas por fecha
 const obtenerCitasPorFecha = async(req, res) => {
     const { fecha } = req.params;
-    
     try {
         const fechaInicio = new Date(fecha);
         fechaInicio.setHours(0, 0, 0, 0);
-        
         const fechaFin = new Date(fecha);
         fechaFin.setHours(23, 59, 59, 999);
-
         const citas = await Cita.find({
             fecha: {
                 $gte: fechaInicio,
@@ -126,9 +130,12 @@ const obtenerCitasPorFecha = async(req, res) => {
         })
         .populate('paciente', 'nombre especie')
         .populate('cliente', 'nombre apellido telefono')
-        .populate('veterinario', 'nombre')
+        .populate({
+            path: 'veterinario',
+            select: 'especialidad licenciaProfesional usuario',
+            populate: { path: 'usuario', select: 'nombre email activo createdAt' }
+        })
         .sort({ hora: 1 });
-
         res.json(citas);
     } catch (error) {
         console.log(error);
@@ -138,7 +145,6 @@ const obtenerCitasPorFecha = async(req, res) => {
 // Obtener citas de un veterinario
 const obtenerCitasPorVeterinario = async(req, res) => {
     const { veterinarioId } = req.params;
-    
     try {
         const citas = await Cita.find({ 
             veterinario: veterinarioId,
@@ -146,8 +152,12 @@ const obtenerCitasPorVeterinario = async(req, res) => {
         })
         .populate('paciente', 'nombre especie')
         .populate('cliente', 'nombre apellido telefono')
+        .populate({
+            path: 'veterinario',
+            select: 'especialidad licenciaProfesional usuario',
+            populate: { path: 'usuario', select: 'nombre email activo createdAt' }
+        })
         .sort({ fecha: 1, hora: 1 });
-
         res.json(citas);
     } catch (error) {
         console.log(error);
@@ -157,13 +167,15 @@ const obtenerCitasPorVeterinario = async(req, res) => {
 // Obtener citas de un cliente
 const obtenerCitasPorCliente = async(req, res) => {
     const { clienteId } = req.params;
-    
     try {
         const citas = await Cita.find({ cliente: clienteId })
             .populate('paciente', 'nombre especie')
-            .populate('veterinario', 'nombre especialidad')
+            .populate({
+                path: 'veterinario',
+                select: 'especialidad licenciaProfesional usuario',
+                populate: { path: 'usuario', select: 'nombre email activo createdAt' }
+            })
             .sort({ fecha: -1 });
-
         res.json(citas);
     } catch (error) {
         console.log(error);
@@ -173,13 +185,15 @@ const obtenerCitasPorCliente = async(req, res) => {
 // Obtener citas de un paciente
 const obtenerCitasPorPaciente = async(req, res) => {
     const { pacienteId } = req.params;
-    
     try {
         const citas = await Cita.find({ paciente: pacienteId })
-            .populate('veterinario', 'nombre especialidad')
+            .populate({
+                path: 'veterinario',
+                select: 'especialidad licenciaProfesional usuario',
+                populate: { path: 'usuario', select: 'nombre email activo createdAt' }
+            })
             .populate('cliente', 'nombre apellido')
             .sort({ fecha: -1 });
-
         res.json(citas);
     } catch (error) {
         console.log(error);

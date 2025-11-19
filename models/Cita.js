@@ -14,7 +14,7 @@ const citaSchema = mongoose.Schema({
     },
     veterinario: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Usuario',
+        ref: 'Veterinario', // Cambiado de 'Usuario' a 'Veterinario'
         required: true
     },
     // Fecha y hora

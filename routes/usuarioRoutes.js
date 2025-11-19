@@ -13,7 +13,8 @@ import {
     obtenerUsuarios,
     obtenerVeterinarios,
     desactivarUsuario,
-    activarUsuario
+    activarUsuario,
+    obtenerUsuarioPorId
 } from "../controllers/usuarioController.js"
 import checkAuth from "../middleware/authMiddleware.js"
 import { isAdmin, isPersonal } from "../middleware/roleMiddleware.js"
@@ -32,6 +33,7 @@ router.put('/actualizar-password', checkAuth, actualizarPassword)
 
 // Rutas de administración (solo admin)
 router.get("/", checkAuth, isAdmin, obtenerUsuarios)
+router.get("/:id", checkAuth, isAdmin, obtenerUsuarioPorId)
 router.get("/veterinarios", checkAuth, isPersonal, obtenerVeterinarios)
 router.put("/desactivar/:id", checkAuth, isAdmin, desactivarUsuario)
 router.put("/activar/:id", checkAuth, isAdmin, activarUsuario)

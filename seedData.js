@@ -3,6 +3,7 @@ import Usuario from './models/Usuario.js';
 import Cliente from './models/Cliente.js';
 import Paciente from './models/Paciente.js';
 import Cita from './models/Cita.js';
+import Veterinario from './models/Veterinario.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -27,6 +28,10 @@ const seedData = async () => {
     await Cita.deleteMany({});
     await Paciente.deleteMany({});
     await Cliente.deleteMany({});
+    await Cita.deleteMany({});
+    await Paciente.deleteMany({});
+    await Cliente.deleteMany({});
+    await Veterinario.deleteMany({});
     await Usuario.deleteMany({ 
       email: { $in: ['admin@veterinaria.com', 'veterinario@veterinaria.com', 'recepcion@veterinaria.com'] } 
     });
@@ -55,7 +60,14 @@ const seedData = async () => {
       confirmado: true,
     });
     await veterinarioUser.save();
-    console.log('✅ Usuario Veterinario creado');
+    // Crear documento en Veterinario
+    const veterinarioDoc = new Veterinario({
+      usuario: veterinarioUser._id,
+      especialidad: 'Medicina interna',
+      licenciaProfesional: 'VET-12345'
+    });
+    await veterinarioDoc.save();
+    console.log('✅ Usuario Veterinario y documento Veterinario creados');
 
     const recepcionUser = new Usuario({
       nombre: 'María Recepción',
@@ -430,6 +442,7 @@ const seedData = async () => {
     console.log('🎉 ¡Seed completado exitosamente!\n');
     console.log('📊 Resumen de datos creados:');
     console.log('   • 3 Usuarios (Admin, Veterinario, Recepción)');
+    console.log('   • 1 Veterinario (modelo separado)');
     console.log('   • 3 Clientes');
     console.log('   • 5 Pacientes (mascotas)');
     console.log('   • 14 Citas distribuidas en:\n');

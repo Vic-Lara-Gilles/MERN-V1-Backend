@@ -29,15 +29,6 @@ const usuarioSchema = mongoose.Schema({
         enum: ['admin', 'veterinario', 'recepcion'],
         default: 'veterinario'
     },
-    // Solo para veterinarios
-    especialidad: {
-        type: String,
-        trim: true
-    },
-    licenciaProfesional: {
-        type: String,
-        trim: true
-    },
     // Control
     activo: {
         type: Boolean,
@@ -57,12 +48,6 @@ const usuarioSchema = mongoose.Schema({
 
 // Validaciones y hasheo de password antes de guardar
 usuarioSchema.pre('save', async function(next) {
-    // Validar que veterinarios tengan especialidad
-    if (this.rol === 'veterinario' && !this.especialidad) {
-        const error = new Error('Veterinarios deben tener especialidad');
-        return next(error);
-    }
-    
     // Hashear password solo si fue modificado
     if(!this.isModified('password')) {
         next();
