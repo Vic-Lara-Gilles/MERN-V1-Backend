@@ -2,11 +2,13 @@ import express from "express";
 import dotenv from 'dotenv';
 import cors from "cors";
 import conectarDB from "./config/db.js";
+
 import authRoutes from './routes/usuarioRoutes.js';
 import clienteRoutes from './routes/clienteRoutes.js';
 import pacienteRoutes from './routes/pacienteRoutes.js';
 import citaRoutes from './routes/citaRoutes.js';
 import consultaRoutes from './routes/consultaRoutes.js';
+import veterinarioRoutes from './routes/veterinarioRoutes.js';
 
 const app = express();
 
@@ -37,7 +39,7 @@ app.use(cors(corsOptions));
 app.use(express.json());
 
 // Rutas de autenticación y gestión de usuarios
-app.use("/api/veterinarios", authRoutes); 
+app.use("/api/veterinarios", veterinarioRoutes);
 app.use("/api/usuarios", authRoutes);
 app.use("/api/clientes", clienteRoutes);
 app.use("/api/pacientes", pacienteRoutes);
