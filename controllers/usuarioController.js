@@ -77,7 +77,7 @@ const autenticar = async(req, res) => {
     const usuario = await Usuario.findOne({email});
 
     if(!usuario) {
-        const error = new Error("El usuario no existe");
+        const error = new Error("Email o password incorrectos");
         return res.status(404).json({msg: error.message});
     }
 
@@ -105,7 +105,7 @@ const autenticar = async(req, res) => {
             token: generarJWT(usuario.id)
         });
     } else {
-        const error = new Error("El password es incorrecto");
+        const error = new Error("Email o password incorrectos");
         return res.status(403).json({msg: error.message});
     }
 };
@@ -115,9 +115,10 @@ const olvidePassword = async (req, res) => {
     const {email} = req.body;
 
     const existeUsuario = await Usuario.findOne({email});
+    
+    // Siempre devolver el mismo mensaje para no revelar si el usuario existe
     if (!existeUsuario) {
-        const error = new Error("El usuario no existe");
-        return res.status(400).json({ msg: error.message});
+        return res.json({ msg: "Hemos enviado un email con las instrucciones"});
     }
 
     try {
