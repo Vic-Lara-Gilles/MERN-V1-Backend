@@ -4,7 +4,7 @@ import generarId from "../helpers/generarId.js";
 import emailRegistro from "../helpers/emailRegistro.js";
 import emailOlvidePassword from "../helpers/emailOlvidePassword.js";
 
-// Registrar nuevo usuario (solo admin)
+// Registrar nuevo usuario (solo admin) - SIN PASSWORD
 const registrar = async (req, res) => {
     const {email, nombre, rol} = req.body;
 
@@ -24,20 +24,37 @@ const registrar = async (req, res) => {
     }
 
     try {
-        // Guardar un nuevo usuario
-        const usuario = new Usuario(req.body);
+        // Crear usuario SIN password, confirmado en false
+        const usuario = new Usuario({
+            nombre,
+            email,
+            rol,
+            telefono: req.body.telefono,
+            confirmado: false,  // Debe confirmar email
+            token: generarId()  // Token para confirmación
+        });
+        
         const usuarioGuardado = await usuario.save();
 
-        // Enviar email
+        // Enviar email de confirmación
         emailRegistro({
             email,
             nombre,
             token: usuarioGuardado.token
         });
 
-        res.json(usuarioGuardado);
+        res.json({
+            msg: 'Usuario creado correctamente. Se ha enviado un email de confirmación.',
+            usuario: {
+                _id: usuarioGuardado._id,
+                nombre: usuarioGuardado.nombre,
+                email: usuarioGuardado.email,
+                rol: usuarioGuardado.rol
+            }
+        });
     } catch (error) {
         console.log(error);
+        res.status(500).json({msg: 'Error al crear usuario'});
     }
 };
 
@@ -47,7 +64,7 @@ const perfil = (req, res) => {
     res.json(usuario);
 };
 
-// Confirmar cuenta
+// Confirmar cuenta - Ahora redirige a crear password
 const confirmar = async(req, res) => {
     const {token} = req.params;
 
@@ -59,13 +76,22 @@ const confirmar = async(req, res) => {
     }
 
     try {
-        usuarioConfirmar.token = null;
+        // NO eliminamos el token todavía - se usará para crear password
         usuarioConfirmar.confirmado = true;
         await usuarioConfirmar.save();
 
-        res.json({ msg: "Usuario confirmado correctamente"});
+        res.json({ 
+            msg: "Email confirmado correctamente. Ahora debes crear tu contraseña.",
+            token: usuarioConfirmar.token,  // Devolvemos el token para crear password
+            usuario: {
+                nombre: usuarioConfirmar.nombre,
+                email: usuarioConfirmar.email,
+                rol: usuarioConfirmar.rol
+            }
+        });
     } catch (error) {
         console.log(error);
+        res.status(500).json({msg: 'Error al confirmar cuenta'});
     }
 };
 
@@ -84,6 +110,12 @@ const autenticar = async(req, res) => {
     // Comprobar si el usuario está confirmado
     if(!usuario.confirmado) {
         const error = new Error("Tu cuenta no ha sido confirmada");
+        return res.status(403).json({msg: error.message});
+    }
+
+    // Comprobar si tiene password (si no, debe crearlo)
+    if(!usuario.password) {
+        const error = new Error("Debes crear tu contraseña primero");
         return res.status(403).json({msg: error.message});
     }
 
@@ -152,24 +184,27 @@ const comprobarToken = async(req, res) => {
     }
 };
 
-// Establecer nuevo password
+// Establecer nuevo password (usado tanto para crear password inicial como para reseteo)
 const nuevoPassword = async(req, res) => {
     const { token } = req.params;
     const { password } = req.body;
 
     const usuario = await Usuario.findOne({ token });
     if (!usuario) {
-        const error = new Error("Hubo un error");
+        const error = new Error("Token no válido");
         return res.status(400).json({ msg: error.message });
     }
 
     try {
-        usuario.token = null;
-        usuario.password = password;
+        usuario.token = null;  // Limpiar token
+        usuario.password = password;  // Establecer password
+        usuario.confirmado = true;  // Asegurar que está confirmado
         await usuario.save();
-        res.json({ msg: "Password modificado correctamente"});
+        
+        res.json({ msg: "Contraseña creada correctamente. Ya puedes iniciar sesión."});
     } catch (error) {
         console.log(error);
+        res.status(500).json({msg: 'Error al crear contraseña'});
     }
 };
 
