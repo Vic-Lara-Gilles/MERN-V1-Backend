@@ -2,7 +2,7 @@ import Cliente from "../models/Cliente.js";
 import Paciente from "../models/Paciente.js";
 import generarJWT from "../helpers/generarJWT.js";
 import generarId from "../helpers/generarId.js";
-import emailRegistro from "../helpers/emailRegistro.js";
+import emailBienvenidaCliente from "../helpers/emailBienvenidaCliente.js";
 import emailOlvidePassword from "../helpers/emailOlvidePassword.js";
 
 // Registrar nuevo cliente (personal de la clínica)
@@ -38,9 +38,19 @@ const registrar = async (req, res) => {
             comuna: req.body.comuna,
             notas: req.body.notas,
             password: passwordTemporal,
+            emailVerificado: false,  // Debe verificar email
+            token: generarId(),      // Token para verificación
             registradoPor: req.usuario._id
         });
         const clienteGuardado = await cliente.save();
+
+        // Enviar email de verificación automáticamente
+        emailBienvenidaCliente({
+            email: clienteGuardado.email,
+            nombre: clienteGuardado.nombre,
+            rut: clienteGuardado.rut,
+            token: clienteGuardado.token
+        });
 
         // Crear pacientes asociados si se enviaron
         let pacientesCreados = [];
@@ -58,8 +68,11 @@ const registrar = async (req, res) => {
         // Devolver respuesta sin el password
         const { password, token, ...clienteResponse } = clienteGuardado.toObject();
         res.json({
-            ...clienteResponse,
-            pacientes: pacientesCreados
+            msg: 'Cliente creado. Se ha enviado un email de verificación.',
+            cliente: {
+                ...clienteResponse,
+                pacientes: pacientesCreados
+            }
         });
     } catch (error) {
         console.log(error);
@@ -203,9 +216,10 @@ const habilitarPortal = async(req, res) => {
         await cliente.save();
 
         // Enviar email de verificación
-        emailRegistro({
+        emailBienvenidaCliente({
             email: cliente.email,
             nombre: cliente.nombre,
+            rut: cliente.rut,
             token: cliente.token
         });
 
@@ -259,7 +273,7 @@ const perfilCliente = (req, res) => {
     res.json(cliente);
 };
 
-// Confirmar email del cliente
+// Confirmar email del cliente - Redirige a cambiar password
 const confirmarEmail = async(req, res) => {
     const {token} = req.params;
 
@@ -270,13 +284,17 @@ const confirmarEmail = async(req, res) => {
     }
 
     try {
-        cliente.token = null;
+        // Marcar como verificado PERO mantener el token para cambiar password
         cliente.emailVerificado = true;
         await cliente.save();
 
-        res.json({ msg: "Email verificado correctamente. Ya puedes acceder al portal"});
+        res.json({ 
+            msg: "Email verificado. Ahora puedes cambiar tu contraseña.",
+            token: cliente.token  // Devolver token para cambiar password
+        });
     } catch (error) {
         console.log(error);
+        res.status(500).json({msg: 'Error al verificar email'});
     }
 };
 
@@ -286,8 +304,7 @@ const olvidePasswordCliente = async (req, res) => {
 
     const cliente = await Cliente.findOne({email});
     if (!cliente) {
-        const error = new Error("Email no registrado");
-        return res.status(400).json({ msg: error.message});
+        return res.json({ msg: "Hemos enviado un email con las instrucciones"});
     }
 
     try {
@@ -319,24 +336,27 @@ const comprobarTokenCliente = async(req, res) => {
     }
 };
 
-// Nuevo password cliente
+// Nuevo password cliente (usado para cambiar password inicial o reseteo)
 const nuevoPasswordCliente = async(req, res) => {
     const { token } = req.params;
     const { password } = req.body;
 
     const cliente = await Cliente.findOne({ token });
     if (!cliente) {
-        const error = new Error("Hubo un error");
+        const error = new Error("Token no válido");
         return res.status(400).json({ msg: error.message });
     }
 
     try {
-        cliente.token = null;
-        cliente.password = password;
+        cliente.token = null;           // Limpiar token
+        cliente.password = password;    // Nueva password
+        cliente.emailVerificado = true; // Asegurar verificación
         await cliente.save();
-        res.json({ msg: "Password modificado correctamente"});
+        
+        res.json({ msg: "Contraseña cambiada correctamente. Ya puedes iniciar sesión."});
     } catch (error) {
         console.log(error);
+        res.status(500).json({msg: 'Error al cambiar contraseña'});
     }
 };
 
