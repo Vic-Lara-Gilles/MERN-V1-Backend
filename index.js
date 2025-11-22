@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from 'dotenv';
 import cors from "cors";
 import conectarDB from "./config/db.js";
+import crearAdminDefault from "./utils/crearAdminDefault.js";
 
 import authRoutes from './routes/usuarioRoutes.js';
 import clienteRoutes from './routes/clienteRoutes.js';
@@ -14,25 +15,34 @@ const app = express();
 
 dotenv.config();
 
+// Conectar a la base de datos
 conectarDB();
 
+// Crear administrador por defecto si no existe
+crearAdminDefault();
+
+// Configuración de CORS
 const dominiosPermitidos = [process.env.FRONTEND_URL];
 
 const corsOptions = {
     origin: function(origin, callback) {
-        console.log('CORS Origin:', origin);
-        console.log('Dominios permitidos:', dominiosPermitidos);
-        if(!origin || dominiosPermitidos.indexOf(origin) !== -1) {
-             // El Origen del request esta permitido
-             console.log('Origen permitido');
-             callback(null, true)
+        // Permitir requests sin origin (como Postman, curl, etc.)
+        if (!origin) {
+            return callback(null, true);
+        }
+        
+        if (dominiosPermitidos.indexOf(origin) !== -1) {
+            // El origen está permitido
+            callback(null, true);
         } else {
-             // No lanzar error, solo denegar
-             console.log('Origen denegado');
-             callback(null, false)
+            // El origen no está permitido
+            callback(new Error('No permitido por CORS'));
         }
     },
-    credentials: true
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    exposedHeaders: ['Content-Length', 'X-Request-Id']
 };
 
 app.use(cors(corsOptions)); 
@@ -46,7 +56,7 @@ app.use("/api/pacientes", pacienteRoutes);
 app.use("/api/citas", citaRoutes);
 app.use("/api/consultas", consultaRoutes); 
 
-const PORT = process.env.PORT || 4000
+const PORT = process.env.PORT || 4000;
 
 app.listen(PORT, () => {
     console.log(`Servidor funcionando en el puerto ${PORT}`); 
